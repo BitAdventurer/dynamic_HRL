@@ -30,37 +30,64 @@ JBHI_season2/
 │   ├── plot.py                    # Basic visualization (window/step distribution, learning curves)
 │   ├── plot_ablation.py           # Ablation study result visualization
 │   ├── plot_reward.py             # Reward analysis visualization
-│   └── plot_full_distribution.py  # Full distribution visualization
-│
-├── scripts/                       # 🔧 Utilities and analysis scripts
-│   ├── run_experiments.py         # Grid search automation
-│   ├── calculate_stats.py         # Statistical analysis
-│   ├── fig_test.py                # dFC state dynamics plotting
-│   ├── fig_test2.py               # Heatmap generation
-│   ├── plot_dfc.py                # Dynamic FC visualization
-│   ├── plot_fc.py                 # Static FC visualization
-│   └── check_pkl.py               # PKL file inspection
+│   ├── plot_full_distribution.py  # Full distribution visualization
+│   ├── plot_gradient.py           # Gradient analysis visualization
+│   ├── plot_policy_log.py         # Policy learning visualization
+│   ├── save_results.py            # Results saving utilities
+│   ├── convert_models_to_state_dict.py  # Model conversion utilities
+│   └── heatmap.py                 # Heatmap generation utilities
 │
 ├── utils/                         # 🛠️ Common utilities
 │   ├── preprocessing.py           # Data preprocessing (PCA, LDA, Z-score)
 │   ├── seed.py                    # Seed setting for reproducibility
-│   └── util.py                    # Data loading and other utilities
+│   ├── util.py                    # Data loading and other utilities
+│   └── __init__.py                # Utilities package initialization
 │
-├── data/                          # 📊 Data loader and original data
-│   └── Signal_cv.py               # 5-Fold Cross-Validation data loader
-│
-├── config.py                      # ⚙️ Global settings and hyperparameters
-├── run_ablation.sh                # 🔬 Ablation study automation script
-│
-├── ablation_results/              # 📈 Ablation study results
-├── figures/                       # 🖼️ Generated visualizations (PNG, JPEG)
-├── outputs/                       # 💾 Training results (PKL)
-├── results/                       # 📋 Experimental results (CSV)
-├── logs/                          # 📝 Training logs
-└── models/                        # 🎓 Saved model checkpoints
+├── config.py                      # ⚙️ Configuration and hyperparameters
+├── requirements.txt               # 📦 Python dependencies
+├── run_ablation.sh                # 🚀 Ablation study execution script
+├── LICENSE                        # 📄 CC BY-NC-SA 4.0 International License
+└── README.md                      # 📖 Project documentation
 ```
 
-## 🚀 Usage
+## 🚀 Quick Start
+
+### 📋 Installation
+```bash
+# Clone the repository
+git clone https://github.com/BitAdventurer/dynamic_HRL.git
+cd dynamic_HRL
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### 🎯 Basic Usage
+```bash
+# Basic HRL training with CRNN
+python main/train.py
+
+# Training with different classifiers
+python main/train.py --classifier_type cbgru
+python main/train.py --classifier_type transformer
+
+# Run ablation study
+bash run_ablation.sh
+```
+
+### 📊 Visualization
+```bash
+# Plot reward analysis
+python main/plot_reward.py
+
+# Plot full distribution
+python main/plot_full_distribution.py
+
+# Plot ablation results
+python main/plot_ablation.py
+```
+
+## 🚀 Detailed Usage
 
 ### 1️⃣ HRL Model Training and Evaluation
 
@@ -234,16 +261,19 @@ This project supports three classifier architectures:
 - Contains both MDD patients and healthy controls (NC)
 
 ### Input Data
-- Experimental data is split for 5-fold cross-validation.
-- Each fold contains training, validation, and test sets.
+- **REST-meta-MDD Dataset**: Download from https://rfmri.org/REST-meta-MDD
 - Preprocessed fMRI time series and functional connectivity matrices
+- Experimental data split for 5-fold cross-validation
+- Each fold contains training, validation, and test sets
 
-### Output Data
+### Output Data (Generated during execution)
 - `results/training_val_test_results_allfolds.csv`: Epoch-wise training, validation, test performance
 - `ablation_results/ablation_comparison.csv`: Performance summary by ablation mode and fold
 - `ablation_results/ablation_stats.csv`: Mean and standard deviation by ablation mode
 - `outputs/*.pkl`: Result files generated during training (reward, window/step usage, etc.)
-- `figures/*.png`: Generated visualization images (heatmaps, distribution plots, etc.)
+- `images/*.png`: Generated visualization images (heatmaps, distribution plots, etc.)
+- `models/*.pth`: Saved model checkpoints
+- `logs/*.log`: Training and execution logs
 
 ## ⚙️ Key Hyperparameters
 
