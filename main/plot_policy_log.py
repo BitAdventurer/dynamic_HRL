@@ -3,12 +3,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# policy_log.csv 시각화 함수
+# Visualization function for policy_log.csv
 def plot_policy_log(policy_log_path, output_dir='images/policy_log'):
     os.makedirs(output_dir, exist_ok=True)
     df = pd.read_csv(policy_log_path)
 
-    # 1. label별 예측 클래스 분포
+    # 1. Prediction class distribution by label
     plt.figure(figsize=(7,5))
     sns.countplot(data=df, x='prediction', hue='label')
     plt.title('Prediction distribution by true label')
@@ -19,7 +19,7 @@ def plot_policy_log(policy_log_path, output_dir='images/policy_log'):
     plt.savefig(os.path.join(output_dir, 'prediction_by_label.png'))
     plt.close()
 
-    # 2. label별 confidence 분포
+    # 2. Confidence distribution by label
     plt.figure(figsize=(7,5))
     sns.violinplot(data=df, x='label', y='confidence', inner='quartile')
     plt.title('Confidence distribution by true label')
@@ -29,7 +29,7 @@ def plot_policy_log(policy_log_path, output_dir='images/policy_log'):
     plt.savefig(os.path.join(output_dir, 'confidence_by_label.png'))
     plt.close()
 
-    # 3. 예측/정답별 confusion matrix (heatmap)
+    # 3. Confusion matrix by prediction/ground truth (heatmap)
     cm = pd.crosstab(df['label'], df['prediction'])
     plt.figure(figsize=(5,4))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
@@ -40,7 +40,7 @@ def plot_policy_log(policy_log_path, output_dir='images/policy_log'):
     plt.savefig(os.path.join(output_dir, 'confusion_matrix.png'))
     plt.close()
 
-    # 4. (선택) 환자별 평균 confidence
+    # 4. (Optional) Patient-wise average confidence
     plt.figure(figsize=(10,5))
     mean_conf = df.groupby('patient_id')['confidence'].mean().sort_values()
     mean_conf.plot(kind='bar', color='skyblue')
@@ -56,7 +56,7 @@ def plot_policy_log(policy_log_path, output_dir='images/policy_log'):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--policy_log', type=str, required=True, help='policy_log.csv 경로')
-    parser.add_argument('--output_dir', type=str, default='images/policy_log', help='plot 저장 폴더')
+    parser.add_argument('--policy_log', type=str, required=True, help='Path to policy_log.csv')
+    parser.add_argument('--output_dir', type=str, default='images/policy_log', help='Plot save folder')
     args = parser.parse_args()
     plot_policy_log(args.policy_log, args.output_dir)
