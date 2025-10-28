@@ -280,8 +280,8 @@ This project supports three classifier architectures:
 ### Training Related
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `--epochs` | 200 | Maximum training epochs (as per paper) |
-| `--patience` | 10000 | Early stopping patience |
+| `--epochs` | 2000 | Maximum training epochs |
+| `--patience` | 1500 | Early stopping patience |
 | `--lr` | 1e-4 | Learning rate (paper: $1\times10^{-4}$) |
 | `--wd` | 1e-5 | Weight decay |
 | `--batch_size` | 72 | Batch size (paper: 72) |
