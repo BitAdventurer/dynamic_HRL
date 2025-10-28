@@ -587,27 +587,57 @@ def create_random_hparams(param_ranges, use_hrl=False):
     if use_hrl:
         # HRL mode: different parameter set
         hparams = {
+            # Classifier hyperparameters
             'crnn_hidden_dim': random.choice(param_ranges['crnn_hidden_dim']),
             'crnn_num_layers': random.choice(param_ranges['crnn_num_layers']),
             'crnn_dropout': random.choice(param_ranges['crnn_dropout']),
             'crnn_lr': random.choice(param_ranges['crnn_lr']),
             'crnn_wd': random.choice(param_ranges['crnn_wd']),
+            'crnn_out_channels': random.choice(param_ranges['crnn_out_channels']),
+            'crnn_kernel_size': random.choice(param_ranges['crnn_kernel_size']),
+            'crnn_pool_size': random.choice(param_ranges['crnn_pool_size']),
+            
+            # RL hyperparameters
             'macro_lr': random.choice(param_ranges['macro_lr']),
             'macro_wd': random.choice(param_ranges['macro_wd']),
             'micro_lr': random.choice(param_ranges['micro_lr']),
             'micro_wd': random.choice(param_ranges['micro_wd']),
             'rl_hidden_dim': random.choice(param_ranges['rl_hidden_dim']),
             'rl_embed_dim': random.choice(param_ranges['rl_embed_dim']),
+            'macro_in_dim': random.choice(param_ranges['macro_in_dim']),
+            'micro_in_dim': random.choice(param_ranges['micro_in_dim']),
             'rl_gamma': random.choice(param_ranges['rl_gamma']),
+            'epsilon': random.choice(param_ranges['epsilon']),
             'rl_batch_size': random.choice(param_ranges['rl_batch_size']),
             'rl_buffer_capacity': random.choice(param_ranges['rl_buffer_capacity']),
             'rl_target_update_freq': random.choice(param_ranges['rl_target_update_freq']),
+            'tau': random.choice(param_ranges['tau']),
+            
+            # Gradient clipping
+            'classifier_clip_norm': random.choice(param_ranges['classifier_clip_norm']),
+            'macroq_clip_norm': random.choice(param_ranges['macroq_clip_norm']),
+            'microq_clip_norm': random.choice(param_ranges['microq_clip_norm']),
+            
+            # Feature preprocessing
+            'feature_dim': random.choice(param_ranges['feature_dim']),
+            'pca_dim': random.choice(param_ranges['pca_dim']),
+            'lda_dim': random.choice(param_ranges['lda_dim']),
+            'threshold': random.choice(param_ranges['threshold']),
+            
+            # Focal Loss
             'focal_alpha': random.choice(param_ranges.get('focal_alpha', [0.75])),
             'focal_gamma': random.choice(param_ranges.get('focal_gamma', [3.0])),
+            
+            # Reward shaping
+            'diversity_bonus_weight': random.choice(param_ranges['diversity_bonus_weight']),
+            'max_diversity_history_len': random.choice(param_ranges['max_diversity_history_len']),
+            'max_baseline_history_len': random.choice(param_ranges['max_baseline_history_len']),
+            'reward_nc_penalty_effective': random.choice(param_ranges['reward_nc_penalty_effective']),
         }
     else:
         # Baseline mode: original parameters
         hparams = {
+            # Classifier selection
             'classifier_type': random.choice(param_ranges.get('classifier_type', ['crnn'])),
             'hidden_dim':   random.choice(param_ranges['hidden_dim']),
             'num_layers':   random.choice(param_ranges['num_layers']),
@@ -616,11 +646,30 @@ def create_random_hparams(param_ranges, use_hrl=False):
             'wd':           random.choice(param_ranges['wd']),
             'window_size':  random.choice(param_ranges['window_size']),
             'step_size':    random.choice(param_ranges['step_size']),
+            
+            # CRNN-specific
+            'crnn_out_channels': random.choice(param_ranges['crnn_out_channels']),
+            'crnn_kernel_size': random.choice(param_ranges['crnn_kernel_size']),
+            'crnn_pool_size': random.choice(param_ranges['crnn_pool_size']),
+            
+            # Feature preprocessing
+            'feature_dim': random.choice(param_ranges['feature_dim']),
+            'pca_dim': random.choice(param_ranges['pca_dim']),
+            'lda_dim': random.choice(param_ranges['lda_dim']),
+            'threshold': random.choice(param_ranges['threshold']),
+            
+            # Focal Loss
+            'focal_alpha': random.choice(param_ranges.get('focal_alpha', [0.75])),
+            'focal_gamma': random.choice(param_ranges.get('focal_gamma', [3.0])),
+            
+            # Gradient clipping
+            'classifier_clip_norm': random.choice(param_ranges['classifier_clip_norm']),
         }
         
         # Add transformer-specific parameters if transformer is selected
         if hparams['classifier_type'] == 'transformer':
-            hparams['num_heads'] = random.choice(param_ranges.get('num_heads', [8]))
+            hparams['transformer_num_heads'] = random.choice(param_ranges.get('transformer_num_heads', [8]))
+            hparams['transformer_num_layers'] = random.choice(param_ranges.get('transformer_num_layers', [4]))
             hparams['dim_feedforward'] = random.choice(param_ranges.get('dim_feedforward', [512]))
             hparams['transformer_dropout'] = random.choice(param_ranges.get('transformer_dropout', [0.1]))
     
@@ -914,6 +963,9 @@ if __name__ == "__main__":
         'crnn_dropout': [0.0, 0.1, 0.15, 0.2, 0.25, 0.3],  # Default: 0.2
         'crnn_lr': [5e-5, 1e-5, 5e-6, 1e-6, 5e-7],  # Around default: 1e-5
         'crnn_wd': [5e-5, 1e-5, 5e-6, 1e-6, 0.0],   # Around default: 1e-5
+        'crnn_out_channels': [16, 24, 32, 48],       # Default: 32
+        'crnn_kernel_size': [3, 5, 7],               # Default: 3
+        'crnn_pool_size': [2, 3, 4],                 # Default: 2
         
         # Macro-Agent (DQN) hyperparameters
         'macro_lr': [5e-5, 1e-5, 5e-6, 1e-6, 5e-7], # Around default: 1e-5
@@ -926,16 +978,37 @@ if __name__ == "__main__":
         # RL network architecture
         'rl_hidden_dim': [64, 96, 128, 192, 256],    # Default: 128
         'rl_embed_dim': [64, 96, 128, 192, 256],    # Default: 128
+        'macro_in_dim': [64, 96, 128, 192],          # Default: 128
+        'micro_in_dim': [64, 96, 128, 192],          # Default: 128
         
         # RL training hyperparameters
         'rl_gamma': [0.90, 0.93, 0.95, 0.97, 0.99], # Default: 0.95
+        'epsilon': [0.05, 0.1, 0.15, 0.2, 0.25],    # Default: 0.15
         'rl_batch_size': [1, 2, 4],                  # Default: 1
         'rl_buffer_capacity': [50000, 100000, 200000, 500000], # Default: 100000
         'rl_target_update_freq': [1, 2, 3, 5],       # Default: 1
+        'tau': [0.0005, 0.001, 0.002, 0.005],       # Default: 0.001
+        
+        # Gradient clipping
+        'classifier_clip_norm': [1.0, 2.0, 4.0, 6.0, 8.0],  # Default: 6.0
+        'macroq_clip_norm': [1.0, 2.0, 4.0, 6.0, 8.0],      # Default: 6.0
+        'microq_clip_norm': [1.0, 2.0, 4.0, 6.0, 8.0],      # Default: 6.0
+        
+        # Feature preprocessing
+        'feature_dim': [32, 48, 64, 96, 128],         # Default: 64
+        'pca_dim': [128, 192, 256, 384],             # Default: 256
+        'lda_dim': [128, 192, 256, 384],             # Default: 256
+        'threshold': [0.01, 0.03, 0.05, 0.07, 0.1], # Default: 0.05
         
         # Focal Loss hyperparameters
         'focal_alpha': [0.5, 0.6, 0.75, 0.85, 0.9], # Default: 0.75
         'focal_gamma': [1.5, 2.0, 2.5, 3.0, 3.5, 4.0], # Default: 3.0
+        
+        # Reward shaping parameters
+        'diversity_bonus_weight': [0.01, 0.025, 0.05, 0.075, 0.1],  # Default: 0.05
+        'max_diversity_history_len': [10, 15, 20, 30, 40],          # Default: 20
+        'max_baseline_history_len': [50, 75, 100, 150, 200],        # Default: 100
+        'reward_nc_penalty_effective': [-0.5, -1.0, -1.5, -2.0],   # Default: -1.0
     }
     
     # Baseline hyperparameter ranges (based on README.md defaults)
@@ -948,10 +1021,30 @@ if __name__ == "__main__":
         'wd':           [5e-5, 1e-5, 5e-6, 1e-6, 0.0],   # Around default: 1e-5
         'window_size':  [20, 30, 40, 50, 60, 75, 90, 100], # Common window sizes
         'step_size':    [5, 10, 15, 20, 25, 30, 40],      # Common step sizes
+        
+        # CRNN-specific parameters
+        'crnn_out_channels': [16, 24, 32, 48],       # Default: 32
+        'crnn_kernel_size': [3, 5, 7],               # Default: 3
+        'crnn_pool_size': [2, 3, 4],                 # Default: 2
+        
+        # Feature preprocessing
+        'feature_dim': [32, 48, 64, 96, 128],         # Default: 64
+        'pca_dim': [128, 192, 256, 384],             # Default: 256
+        'lda_dim': [128, 192, 256, 384],             # Default: 256
+        'threshold': [0.01, 0.03, 0.05, 0.07, 0.1], # Default: 0.05
+        
+        # Focal Loss hyperparameters
+        'focal_alpha': [0.5, 0.6, 0.75, 0.85, 0.9], # Default: 0.75
+        'focal_gamma': [1.5, 2.0, 2.5, 3.0, 3.5, 4.0], # Default: 3.0
+        
+        # Gradient clipping
+        'classifier_clip_norm': [1.0, 2.0, 4.0, 6.0, 8.0],  # Default: 6.0
+        
         # Transformer-specific (used only when classifier_type='transformer')
-        'num_heads':    [4, 8, 12, 16],                   # Common transformer heads
-        'dim_feedforward': [256, 384, 512, 768, 1024],   # Common feedforward dims
-        'transformer_dropout': [0.0, 0.1, 0.15, 0.2, 0.3], # Similar to other dropouts
+        'transformer_num_heads': [4, 8, 12, 16],                   # Default: 8
+        'transformer_num_layers': [2, 4, 6, 8],                    # Default: 4
+        'dim_feedforward': [256, 384, 512, 768, 1024],             # Default: 512
+        'transformer_dropout': [0.0, 0.1, 0.15, 0.2, 0.3],        # Default: 0.1
     }
     
     # Select parameter ranges based on mode
