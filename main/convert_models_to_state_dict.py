@@ -1,13 +1,12 @@
 import torch
 import os
 
-# 모델 클래스 import (HRL.py에 정의된 클래스와 동일해야 함)
+# Model classes import (must match classes defined in HRL.py and models.py)
 from HRL import MacroQNet, MicroQNet, CRNNClassifier
 from config import get_config
+from models import TemporalEmbedding, ROIEmbedding, MacroQNet, MicroQNet, CRNNClassifier, SpatioTemporalTransformer
 
-from models import TemporalEmbedding, ROIEmbedding, MacroQNet, MicroQNet, CRNNClassifier
-
-# 환경/하이퍼파라미터 세팅 (HRL.py와 동일)
+# Environment/hyperparameter settings (same as HRL.py)
 args = get_config()
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -24,16 +23,69 @@ CRNN_NUM_LAYERS = args.crnn_num_layers
 CRNN_DROPOUT = args.dropout_rate
 CRNN_NUM_CLASSES = args.crnn_num_classes
 
+# Transformer-specific parameters
+TRANSFORMER_NUM_HEADS = args.transformer_num_heads
+TRANSFORMER_NUM_LAYERS = args.transformer_num_layers
+TRANSFORMER_DIM_FEEDFORWARD = args.transformer_dim_feedforward
+TRANSFORMER_DROPOUT = args.transformer_dropout
+
 possible_window_ratios = [i / 100 for i in range(1, 101)]
 possible_shift_ratios = [i / 100 for i in range(1, 101)]
 
-# 변환 대상 파일 목록
+# Helper function to create appropriate classifier
+def create_classifier(filename):
+    """
+    Create appropriate classifier based on filename
+    """
+    if 'transformer' in filename.lower():
+        return SpatioTemporalTransformer(
+            input_dim=FEATURE_DIM,
+            hidden_dim=CRNN_HIDDEN_DIM,
+            num_layers=TRANSFORMER_NUM_LAYERS,
+            num_heads=TRANSFORMER_NUM_HEADS,
+            dim_feedforward=TRANSFORMER_DIM_FEEDFORWARD,
+            dropout=TRANSFORMER_DROPOUT,
+            num_classes=CRNN_NUM_CLASSES
+        )
+    elif 'cbgru' in filename.lower():
+        return CRNNClassifier(
+            input_dim=FEATURE_DIM,
+            hidden_dim=CRNN_HIDDEN_DIM,
+            num_layers=CRNN_NUM_LAYERS,
+            dropout=CRNN_DROPOUT,
+            num_classes=CRNN_NUM_CLASSES,
+            out_channels=CRNN_OUT_CHANNELS,
+            kernel_size=CRNN_KERNEL_SIZE,
+            pool_size=CRNN_POOL_SIZE,
+            bidirectional=True
+        )
+    else:  # Default: CRNN
+        return CRNNClassifier(
+            input_dim=FEATURE_DIM,
+            hidden_dim=CRNN_HIDDEN_DIM,
+            num_layers=CRNN_NUM_LAYERS,
+            dropout=CRNN_DROPOUT,
+            num_classes=CRNN_NUM_CLASSES,
+            out_channels=CRNN_OUT_CHANNELS,
+            kernel_size=CRNN_KERNEL_SIZE,
+            pool_size=CRNN_POOL_SIZE,
+            bidirectional=False
+        )
+
+# Target file list for conversion
 model_dir = os.path.join(os.path.dirname(__file__), '../models/weight')
 file_map = []
+
 for i in range(1, 6):
+    # HRL components
     file_map.append((f"macroQ_fold{i}.pt", MacroQNet, (MACRO_IN_DIM, RL_HIDDEN_DIM, RL_EMBED_DIM, len(possible_window_ratios))))
     file_map.append((f"microQ_fold{i}.pt", MicroQNet, (MICRO_IN_DIM, RL_HIDDEN_DIM, RL_EMBED_DIM, len(possible_shift_ratios))))
-    file_map.append((f"classifier_fold{i}.pt", CRNNClassifier, (FEATURE_DIM, CRNN_HIDDEN_DIM, CRNN_NUM_LAYERS, CRNN_DROPOUT, CRNN_NUM_CLASSES, CRNN_OUT_CHANNELS, CRNN_KERNEL_SIZE, CRNN_POOL_SIZE)))
+    
+    # Multiple classifier types
+    file_map.append((f"classifier_fold{i}.pt", create_classifier(f"classifier_fold{i}.pt"), None))  # Will be created dynamically
+    file_map.append((f"crnn_classifier_fold{i}.pt", create_classifier(f"crnn_classifier_fold{i}.pt"), None))
+    file_map.append((f"cbgru_classifier_fold{i}.pt", create_classifier(f"cbgru_classifier_fold{i}.pt"), None))
+    file_map.append((f"transformer_classifier_fold{i}.pt", create_classifier(f"transformer_classifier_fold{i}.pt"), None))
 
 for fname, cls, ctor_args in file_map:
     fpath = os.path.join(model_dir, fname)
@@ -52,4 +104,4 @@ for fname, cls, ctor_args in file_map:
     torch.save(model.state_dict(), state_dict_path)
     print(f"[SAVED] {state_dict_path}")
 
-print("변환 완료.")
+print("Conversion completed.")
