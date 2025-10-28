@@ -275,25 +275,28 @@ This project supports three classifier architectures:
 - `models/*.pth`: Saved model checkpoints
 - `logs/*.log`: Training and execution logs
 
-## ⚙️ Key Hyperparameters
+## ⚙️ Key Hyperparameters (Paper-Aligned)
 
 ### Training Related
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `--epochs` | 100000 | Maximum training epochs |
+| `--epochs` | 200 | Maximum training epochs (as per paper) |
 | `--patience` | 10000 | Early stopping patience |
-| `--lr` | 1e-5 | Learning rate (common for classifier, macro, micro) |
+| `--lr` | 1e-4 | Learning rate (paper: $1\times10^{-4}$) |
 | `--wd` | 1e-5 | Weight decay |
-| `--batch_size` | 1 | Batch size (1 recommended for HRL) |
+| `--batch_size` | 72 | Batch size (paper: 72) |
 
 ### RL Related
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `--discount_factor` | 0.95 | Gamma (discount factor) |
-| `--epsilon` | 0.15 | Epsilon-greedy exploration rate |
-| `--rl_batch_size` | 1 | RL training batch size |
-| `--buffer_capacity` | 100000 | Replay buffer capacity |
-| `--rl_target_update_freq` | 1 | Target network update frequency |
+| `--epsilon_start` | 1.0 | Starting epsilon for exploration |
+| `--epsilon_end` | 0.05 | Ending epsilon for exploration |
+| `--epsilon_decay_ratio` | 0.2 | Decay over 20% of episodes |
+| `--rl_batch_size` | 72 | RL training batch size |
+| `--buffer_capacity` | 10000 | Replay buffer capacity (10k as per paper) |
+| `--rl_target_update_freq` | 100 | Target network update frequency (every 100 steps) |
+| `MAX_STEPS_PER_TRIAL` | 50 | Maximum steps per episode (paper: 50) |
 
 ### Model Architecture
 | Parameter | Default | Description |
@@ -301,8 +304,10 @@ This project supports three classifier architectures:
 | `--crnn_hidden_dim` | 128 | Classifier hidden dimension |
 | `--crnn_num_layers` | 2 | Classifier number of layers |
 | `--crnn_dropout` | 0.2 | Classifier dropout rate |
-| `--rl_hidden_dim` | 128 | RL network hidden dimension |
-| `--rl_embed_dim` | 128 | RL embedding dimension |
+| `--rl_hidden_dim` | 1024 | RL network hidden dimension (5×1024 MLP) |
+| `--rl_embed_dim` | 1024 | RL embedding dimension (5×1024 MLP) |
+| `--macro_in_dim` | 1024 | Macro agent input dimension |
+| `--micro_in_dim` | 1024 | Micro agent input dimension |
 | `--rl_dropout` | 0.2 | RL dropout rate |
 
 ### Focal Loss
@@ -318,7 +323,7 @@ This project supports three classifier architectures:
 | `--fixed_window_size` | 30,60 | Fixed window size (TRs) |
 | `--fixed_shift_ratio` | 0.5,1.0 | Fixed shift ratio (0~1) |
 
-## 🔬 HRL Architecture Details
+## 🔬 HRL Architecture Details (Paper-Aligned)
 
 ### Hierarchical Structure
 
@@ -329,10 +334,12 @@ This project supports three classifier architectures:
 │                                                     │
 │  ┌──────────────┐        ┌──────────────┐           │
 │  │ Macro-Agent  │        │ Micro-Agent  │           │
+│  │ 5×1024 MLP   │        │ 5×1024 MLP   │           │
 │  └──────┬───────┘        └──────┬───────┘           │
 │         │                       │                   │
 │         ├── Window Size ────────┤                   │
-│         │   [10~230 TRs]        │                   │
+│         │   [10~232 TRs]        │                   │
+│         │   (1 TR interval)     │                   │
 │         │                       │                   │
 │         │                  Shift Ratio              │
 │         │                  [0.01~1.00]              │
@@ -346,6 +353,26 @@ This project supports three classifier architectures:
 │              └──────────────┘                       │
 └─────────────────────────────────────────────────────┘
 ```
+
+### RL Agent Specifications
+
+**Network Architecture:**
+- **Macro Agent**: 5×1024 MLP with ReLU activation
+- **Micro Agent**: 5×1024 MLP with ReLU activation
+- **Replay Buffers**: Independent buffers (10k capacity each)
+- **Target Networks**: Updated every 100 steps
+- **Optimizer**: Adam with learning rate $1\times10^{-4}$
+
+**Exploration Strategy:**
+- **Epsilon-greedy**: Linear decay from 1.0 to 0.05
+- **Decay Period**: First 20% of training episodes
+- **Final epsilon**: 0.05 for continued exploration
+
+**Training Configuration:**
+- **Batch Size**: 72 (efficient training)
+- **Discount Factor**: γ = 0.95
+- **Max Steps per Episode**: 50
+- **Training Duration**: 200 epochs
 
 ### Reward Function
 
