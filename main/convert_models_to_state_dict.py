@@ -29,13 +29,15 @@ TRANSFORMER_NUM_LAYERS = args.transformer_num_layers
 TRANSFORMER_DIM_FEEDFORWARD = args.transformer_dim_feedforward
 TRANSFORMER_DROPOUT = args.transformer_dropout
 
-possible_window_ratios = [i / 100 for i in range(1, 101)]
-possible_shift_ratios = [i / 100 for i in range(1, 101)]
+# Action space sizes for Q-Networks (not actual ratios)
+macro_action_space_size = 100  # Number of possible window size actions
+micro_action_space_size = 100  # Number of possible shift ratio actions
 
 # Helper function to create appropriate classifier
 def create_classifier(filename):
     """
-    Create appropriate classifier based on filename
+    Create appropriate classifier based on filename pattern
+    Supports CRNN, CBGRU, and Transformer architectures
     """
     if 'transformer' in filename.lower():
         return SpatioTemporalTransformer(
@@ -78,8 +80,8 @@ file_map = []
 
 for i in range(1, 6):
     # HRL components
-    file_map.append((f"macroQ_fold{i}.pt", MacroQNet, (MACRO_IN_DIM, RL_HIDDEN_DIM, RL_EMBED_DIM, len(possible_window_ratios))))
-    file_map.append((f"microQ_fold{i}.pt", MicroQNet, (MICRO_IN_DIM, RL_HIDDEN_DIM, RL_EMBED_DIM, len(possible_shift_ratios))))
+    file_map.append((f"macroQ_fold{i}.pt", MacroQNet, (MACRO_IN_DIM, RL_HIDDEN_DIM, RL_EMBED_DIM, macro_action_space_size)))
+    file_map.append((f"microQ_fold{i}.pt", MicroQNet, (MICRO_IN_DIM, RL_HIDDEN_DIM, RL_EMBED_DIM, micro_action_space_size)))
     
     # Multiple classifier types
     file_map.append((f"classifier_fold{i}.pt", create_classifier(f"classifier_fold{i}.pt"), None))  # Will be created dynamically
