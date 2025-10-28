@@ -906,52 +906,52 @@ if __name__ == "__main__":
     # ====================================
     USE_HRL = True  # Set to True for HRL optimization, False for baseline classifiers
     
-    # HRL hyperparameter ranges (더 다양한 탐색 공간)
+    # HRL hyperparameter ranges (based on README.md defaults)
     hrl_param_ranges = {
         # Classifier (CRNN) hyperparameters
-        'crnn_hidden_dim': [64, 128, 192, 256, 384, 512],
-        'crnn_num_layers': [1, 2, 3, 4, 6],
-        'crnn_dropout': [0.0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4],
-        'crnn_lr': [5e-3, 1e-3, 5e-4, 1e-4, 5e-5, 1e-5, 5e-6],
-        'crnn_wd': [1e-3, 5e-4, 1e-4, 5e-5, 1e-5, 5e-6, 1e-6, 0.0],
+        'crnn_hidden_dim': [64, 96, 128, 192, 256],  # Default: 128
+        'crnn_num_layers': [1, 2, 3, 4],            # Default: 2
+        'crnn_dropout': [0.0, 0.1, 0.15, 0.2, 0.25, 0.3],  # Default: 0.2
+        'crnn_lr': [5e-5, 1e-5, 5e-6, 1e-6, 5e-7],  # Around default: 1e-5
+        'crnn_wd': [5e-5, 1e-5, 5e-6, 1e-6, 0.0],   # Around default: 1e-5
         
         # Macro-Agent (DQN) hyperparameters
-        'macro_lr': [5e-3, 1e-3, 5e-4, 1e-4, 5e-5, 1e-5],
-        'macro_wd': [1e-3, 1e-4, 1e-5, 1e-6, 0.0],
+        'macro_lr': [5e-5, 1e-5, 5e-6, 1e-6, 5e-7], # Around default: 1e-5
+        'macro_wd': [5e-5, 1e-5, 5e-6, 1e-6, 0.0],  # Around default: 1e-5
         
         # Micro-Agent (Contextual Bandit) hyperparameters
-        'micro_lr': [5e-3, 1e-3, 5e-4, 1e-4, 5e-5, 1e-5],
-        'micro_wd': [1e-3, 1e-4, 1e-5, 1e-6, 0.0],
+        'micro_lr': [5e-5, 1e-5, 5e-6, 1e-6, 5e-7], # Around default: 1e-5
+        'micro_wd': [5e-5, 1e-5, 5e-6, 1e-6, 0.0],  # Around default: 1e-5
         
         # RL network architecture
-        'rl_hidden_dim': [32, 64, 96, 128, 192, 256, 384, 512],
-        'rl_embed_dim': [32, 64, 96, 128, 192, 256, 384, 512],
+        'rl_hidden_dim': [64, 96, 128, 192, 256],    # Default: 128
+        'rl_embed_dim': [64, 96, 128, 192, 256],    # Default: 128
         
         # RL training hyperparameters
-        'rl_gamma': [0.80, 0.85, 0.90, 0.93, 0.95, 0.97, 0.99, 0.995],
-        'rl_batch_size': [1, 2, 4, 8],
-        'rl_buffer_capacity': [5000, 10000, 20000, 50000, 100000, 200000],
-        'rl_target_update_freq': [1, 2, 3, 5, 10, 20],
+        'rl_gamma': [0.90, 0.93, 0.95, 0.97, 0.99], # Default: 0.95
+        'rl_batch_size': [1, 2, 4],                  # Default: 1
+        'rl_buffer_capacity': [50000, 100000, 200000, 500000], # Default: 100000
+        'rl_target_update_freq': [1, 2, 3, 5],       # Default: 1
         
         # Focal Loss hyperparameters
-        'focal_alpha': [0.1, 0.25, 0.5, 0.6, 0.75, 0.85, 0.9],
-        'focal_gamma': [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0],
+        'focal_alpha': [0.5, 0.6, 0.75, 0.85, 0.9], # Default: 0.75
+        'focal_gamma': [1.5, 2.0, 2.5, 3.0, 3.5, 4.0], # Default: 3.0
     }
     
-    # Baseline hyperparameter ranges (더 다양한 탐색 공간)
+    # Baseline hyperparameter ranges (based on README.md defaults)
     baseline_param_ranges = {
-        'classifier_type': ['crnn', 'cbgru', 'transformer'],  # 분류기 타입 선택
-        'hidden_dim':   [64, 96, 128, 192, 256, 384, 512],
-        'num_layers':   [1, 2, 3, 4, 6],
-        'dropout':      [0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3],
-        'lr':           [5e-3, 1e-3, 5e-4, 1e-4, 5e-5, 1e-5],
-        'wd':           [1e-3, 1e-4, 1e-5, 1e-6, 0.0],
-        'window_size':  [30, 40, 50, 60, 75, 90, 100, 120, 150],
-        'step_size':    [5, 10, 15, 20, 25, 30, 40, 50],
+        'classifier_type': ['crnn', 'cbgru', 'transformer'],
+        'hidden_dim':   [64, 96, 128, 192, 256],    # Around CRNN default: 128
+        'num_layers':   [1, 2, 3, 4],              # Around CRNN default: 2
+        'dropout':      [0.0, 0.1, 0.15, 0.2, 0.25, 0.3],  # Around CRNN default: 0.2
+        'lr':           [5e-5, 1e-5, 5e-6, 1e-6, 5e-7],  # Around default: 1e-5
+        'wd':           [5e-5, 1e-5, 5e-6, 1e-6, 0.0],   # Around default: 1e-5
+        'window_size':  [20, 30, 40, 50, 60, 75, 90, 100], # Common window sizes
+        'step_size':    [5, 10, 15, 20, 25, 30, 40],      # Common step sizes
         # Transformer-specific (used only when classifier_type='transformer')
-        'num_heads':    [2, 4, 6, 8, 12, 16],
-        'dim_feedforward': [128, 256, 384, 512, 768, 1024],
-        'transformer_dropout': [0.0, 0.05, 0.1, 0.15, 0.2, 0.3],
+        'num_heads':    [4, 8, 12, 16],                   # Common transformer heads
+        'dim_feedforward': [256, 384, 512, 768, 1024],   # Common feedforward dims
+        'transformer_dropout': [0.0, 0.1, 0.15, 0.2, 0.3], # Similar to other dropouts
     }
     
     # Select parameter ranges based on mode
