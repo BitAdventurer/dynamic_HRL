@@ -75,6 +75,8 @@ logs/
 *.png
 *.jpg
 *.jpeg
+# Allow intro_fig.png for README
+!intro_fig.png
 
 # Temporary files
 *.tmp
