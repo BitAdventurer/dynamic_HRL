@@ -18,7 +18,7 @@ matplotlib.rcParams['xtick.labelsize'] = 18
 matplotlib.rcParams['ytick.labelsize'] = 18
 
 def plot_window_step_hist_per_fold(N_FOLDS):
-    # 파일 로드 시 예외 처리 추가
+    # Add exception handling for file loading
     try:
         with open('fold_window_usage_mdd.pkl','rb') as f:
             fold_window_usage_mdd = pickle.load(f)
@@ -29,16 +29,16 @@ def plot_window_step_hist_per_fold(N_FOLDS):
         with open('fold_step_usage_nc.pkl','rb') as f:
             fold_step_usage_nc = pickle.load(f)
     except (FileNotFoundError, EOFError) as e:
-        print(f"데이터 파일 로드 실패: {e}")
-        print("train.py를 먼저 실행하여 데이터를 생성해주세요.")
-        # 빈 데이터 반환
+        print(f"Failed to load data file: {e}")
+        print("Please run train.py first to generate data.")
+        # Return empty data
         from collections import defaultdict
         fold_window_usage_mdd = defaultdict(lambda: defaultdict(dict))
         fold_window_usage_nc = defaultdict(lambda: defaultdict(dict))
         fold_step_usage_mdd = defaultdict(lambda: defaultdict(dict))
         fold_step_usage_nc = defaultdict(lambda: defaultdict(dict))
     
-    # 데이터가 있는 폴드만 처리
+    # Process only folds with data
     available_folds = [idx for idx in range(1, N_FOLDS+1) 
                        if idx in fold_window_usage_mdd and fold_window_usage_mdd[idx]]
     
@@ -95,7 +95,7 @@ def plot_window_step_hist_per_fold(N_FOLDS):
         plt.savefig(f'images/ratio/fold_{fidx}_mdd_nc_window_step_hist.png', dpi=300)
         plt.close()
 
-    # 전체(MDD/NC) 히스토그램
+    # Overall (MDD/NC) histogram
     overall_mdd_window_list = []
     overall_mdd_step_list   = []
     overall_nc_window_list  = []
@@ -188,7 +188,7 @@ def plot_metrics_csv():
     mean_val_f1,   std_val_f1   = get_mean_std(mean_df, std_df, 'ValF1')
     mean_test_f1,  std_test_f1  = get_mean_std(mean_df, std_df, 'TestF1')
 
-    mean_rewards, std_rewards = get_mean_std(mean_df, std_df, 'TrainReward')  # 가정: 'TrainReward' 컬럼
+    mean_rewards, std_rewards = get_mean_std(mean_df, std_df, 'TrainReward')  # Assuming 'TrainReward' column
 
     plt.figure(figsize=(28, 21))
     # -- Subplot(1): CE Loss
@@ -306,7 +306,7 @@ def plot_metrics_csv():
     plt.savefig(os.path.join(output_dir, 'all_folds_mean_std.png'), dpi=300)
     plt.close()
 
-    # Reward는 별도 figure
+    # Reward uses separate figure
     if mean_rewards is not None:
         plt.figure(figsize=(12,8))
         plt.plot(epochs_arr, mean_rewards, label='Train Reward', color='blue')
@@ -322,7 +322,7 @@ def plot_metrics_csv():
         plt.close()
 
 def plot_mdd_nc_distribution(N_FOLDS=5):
-    # 데이터 로드 - 예외 처리 추가
+    # Data loading - add exception handling
     try:
         with open('fold_window_usage_mdd.pkl','rb') as f:
             fold_window_usage_mdd = pickle.load(f)
@@ -333,26 +333,26 @@ def plot_mdd_nc_distribution(N_FOLDS=5):
         with open('fold_step_usage_nc.pkl','rb') as f:
             fold_step_usage_nc = pickle.load(f)
     except (FileNotFoundError, EOFError) as e:
-        print(f"데이터 파일 로드 실패: {e}")
-        print("train.py를 먼저 실행하여 데이터를 생성해주세요.")
-        # 빈 데이터 반환
+        print(f"Failed to load data file: {e}")
+        print("Please run train.py first to generate data.")
+        # Return empty data
         from collections import defaultdict
         fold_window_usage_mdd = defaultdict(lambda: defaultdict(dict))
         fold_window_usage_nc = defaultdict(lambda: defaultdict(dict))
         fold_step_usage_mdd = defaultdict(lambda: defaultdict(dict))
         fold_step_usage_nc = defaultdict(lambda: defaultdict(dict))
 
-    # MDD 데이터 수집 (평균 X)
+    # MDD data collection (no averaging)
     mdd_points = []
     for fidx in range(1, N_FOLDS+1):
         fold_mdd = fold_window_usage_mdd.get(fidx, fold_window_usage_mdd.get(str(fidx), {}))
         step_mdd = fold_step_usage_mdd.get(fidx, fold_step_usage_mdd.get(str(fidx), {}))
         for pid, wset in fold_mdd.items():
             sset = step_mdd.get(pid, [])
-            for w, s in zip(wset, sset):  # 모든 값 개별 저장
+            for w, s in zip(wset, sset):  # Save all values individually
                 mdd_points.append((w, s))
 
-    # NC 데이터 수집 (평균 X)
+    # NC data collection (no averaging)
     nc_points = []
     for fidx in range(1, N_FOLDS+1):
         fold_nc = fold_window_usage_nc.get(fidx, fold_window_usage_nc.get(str(fidx), {}))
@@ -360,13 +360,13 @@ def plot_mdd_nc_distribution(N_FOLDS=5):
         for pid, wset in fold_nc.items():
             sset = step_nc.get(pid, [])
             # print('KDE',len(wset), len(sset))
-            for w, s in zip(wset, sset):  # 모든 값 개별 저장
+            for w, s in zip(wset, sset):  # Save all values individually
                 nc_points.append((w, s))
 
-    # 데이터프레임 변환
+    # Convert to dataframe
     df_mdd = pd.DataFrame(mdd_points, columns=['WindowSize', 'StepRatio'])
     df_nc = pd.DataFrame(nc_points, columns=['WindowSize', 'StepRatio'])
-    # 데이터 확인
+    # Verify data
     print(df_nc.describe())
 
     # plt.rcParams['font.family'] = 'Times New Roman'
@@ -414,7 +414,7 @@ def plot_mdd_nc_distribution(N_FOLDS=5):
     plt.savefig('images/ratio/nc_distribution_no_mean.png', dpi=300)
     plt.close()
 
-    # MDD vs NC KDE Plot (겹쳐서 비교)
+    # MDD vs NC KDE Plot (overlapped comparison)
     plt.figure(figsize=(8,6))
     sns.kdeplot(
         data=df_mdd, x='WindowSize', y='StepRatio',
@@ -446,13 +446,13 @@ def plot_mdd_nc_scatter(N_FOLDS=5, output_dir=None):
         with open('fold_reward_mdd.pkl', 'rb') as f:
             fold_reward_mdd_data = pickle.load(f)
     except (FileNotFoundError, EOFError, pickle.UnpicklingError) as e:
-        print(f"MDD Reward 데이터 파일 'fold_reward_mdd.pkl' 로드 실패: {e}")
+        print(f"Failed to load MDD Reward data file 'fold_reward_mdd.pkl': {e}")
 
     try:
         with open('fold_reward_nc.pkl', 'rb') as f:
             fold_reward_nc_data = pickle.load(f)
     except (FileNotFoundError, EOFError, pickle.UnpicklingError) as e:
-        print(f"NC Reward 데이터 파일 'fold_reward_nc.pkl' 로드 실패: {e}")
+        print(f"Failed to load NC Reward data file 'fold_reward_nc.pkl': {e}")
 
     if fold_reward_mdd_data:
         for fidx in range(1, N_FOLDS + 1):
@@ -474,9 +474,9 @@ def plot_mdd_nc_scatter(N_FOLDS=5, output_dir=None):
                         nc_points.append((window_size, step_ratio))
 
     if not mdd_points and not nc_points:
-        print("모든 폴드에서 MDD 및 NC 그룹에 대한 데이터를 찾을 수 없습니다.")
+        print("Could not find data for MDD and NC groups in any fold.")
         if not fold_reward_mdd_data and not fold_reward_nc_data:
-             print("train.py를 먼저 실행하여 'fold_reward_mdd.pkl' 및 'fold_reward_nc.pkl' 데이터를 생성해주세요.")
+             print("Please run train.py first to generate 'fold_reward_mdd.pkl' and 'fold_reward_nc.pkl' data.")
         # Proceed to create empty plots or return
 
     df_mdd = pd.DataFrame(mdd_points, columns=['WindowSize', 'StepRatio'])
@@ -577,7 +577,7 @@ def plot_mdd_nc_scatter(N_FOLDS=5, output_dir=None):
 import glob
 
 def get_latest_results_csv():
-    # results/run_*/training_val_test_results_allfolds.csv 중 가장 최근 파일 반환
+    # Return the most recent file from results/run_*/training_val_test_results_allfolds.csv
     result_files = glob.glob('results/run_*/training_val_test_results_allfolds.csv')
     if not result_files:
         return None
@@ -593,7 +593,7 @@ def get_latest_results_csv():
 def plot_fold_final_metrics():
     csv_path = get_latest_results_csv()
     if csv_path is None:
-        print("훈련 결과 파일을 찾을 수 없습니다. train.py를 먼저 실행하세요.")
+        print("Cannot find training result file. Please run train.py first.")
         return
     df = pd.read_csv(csv_path)
     metrics = ['val_auc', 'val_acc', 'test_auc', 'test_acc', 'test_sen', 'test_spec']
@@ -615,19 +615,19 @@ def get_latest_run_dir():
     run_dirs = glob.glob('results/run_*')
     if not run_dirs:
         return None
-    # 생성/수정 시간 기준으로 가장 최근 디렉토리 선택
+    # Select the most recent directory based on creation/modification time
     latest_run_dir = max(run_dirs, key=os.path.getmtime)
     return latest_run_dir
 
 def get_latest_epoch_log_csv():
-    # 가장 최근 run 디렉토리의 epoch_metrics_log.csv 반환 (없으면 기존 방식)
+    # Return epoch_metrics_log.csv from the most recent run directory (fallback to existing method if not found)
     import csv, os
     latest_run_dir = get_latest_run_dir()
     if latest_run_dir:
         csv_path = os.path.join(latest_run_dir, 'epoch_metrics_log.csv')
         if os.path.exists(csv_path):
             return csv_path
-    # fallback: row 수가 가장 많은 파일
+    # fallback: file with the most rows
     result_files = glob.glob('results/run_*/epoch_metrics_log.csv')
     if not result_files:
         return None
@@ -637,7 +637,7 @@ def get_latest_epoch_log_csv():
         try:
             with open(f, 'r') as csvfile:
                 reader = csv.reader(csvfile)
-                row_count = sum(1 for row in reader) - 1  # 헤더 제외
+                row_count = sum(1 for row in reader) - 1  # Exclude header
                 if row_count > max_rows:
                     max_rows = row_count
                     best_file = f
@@ -648,24 +648,24 @@ def get_latest_epoch_log_csv():
 def plot_epoch_metrics(result_dir=None, output_dir=None):
     import os
     if result_dir is not None:
-        # result_dir에서 epoch_metrics_log.csv 찾기
+        # Find epoch_metrics_log.csv in result_dir
         csv_path = os.path.join(result_dir, "epoch_metrics_log.csv")
     else:
         csv_path = get_latest_epoch_log_csv()
     if csv_path is None or not os.path.exists(csv_path):
-        print("epoch_metrics_log.csv 파일을 찾을 수 없습니다. train.py를 먼저 실행하세요.")
+        print("Cannot find epoch_metrics_log.csv file. Please run train.py first.")
         return
-    # 강제: 앞 9개 컬럼만 읽고, 헤더 지정 (뒤에 불필요한 컬럼 무시)
+    # Force: Read only first 9 columns and specify header (ignore unnecessary columns after)
     df = pd.read_csv(csv_path, usecols=range(9), header=0)
     df.columns = ['Fold', 'Epoch', 'Phase', 'Loss', 'Acc', 'Sen', 'Spec', 'F1', 'AUC']
     for col in ['Fold', 'Epoch', 'Phase']:
         if col not in df.columns:
-            print(f"CSV에 {col} 컬럼이 없습니다. 로그 저장 구조를 확인하세요.")
+            print(f"CSV does not have {col} column. Please check log save structure.")
             return
-    # Phase 값 공백 제거
+    # Remove whitespace from Phase values
     df['Phase'] = df['Phase'].astype(str).str.strip()
     print("Unique Phase values:", df['Phase'].unique())
-    # Epoch을 int로 변환 (정렬 및 groupby용), NaN은 제거
+    # Convert Epoch to int (for sorting and groupby), remove NaN
     df['Epoch'] = pd.to_numeric(df['Epoch'], errors='coerce')
     df = df.dropna(subset=['Epoch'])
     df['Epoch'] = df['Epoch'].astype(int)
@@ -675,7 +675,7 @@ def plot_epoch_metrics(result_dir=None, output_dir=None):
     print(df.groupby('Phase').size())
     print("Data count by Fold/Phase:")
     print(df.groupby(['Fold', 'Phase']).size())
-    # output_dir 지정 없으면 기존과 동일하게 동작
+    # If output_dir not specified, behave same as before
     if output_dir is None:
         output_dir = 'images/epoch'
     os.makedirs(output_dir, exist_ok=True)
@@ -713,7 +713,7 @@ def plot_reward(result_dir=None, output_dir=None):
         plot_reward_mod = importlib.import_module('plot_reward')
         plot_reward_mod.main()
     except Exception as e:
-        print(f"[plot_reward] 오류: {e}")
+        print(f"[plot_reward] Error: {e}")
 
 def plot_full_distribution(result_dir=None, output_dir=None):
     import sys
@@ -723,7 +723,7 @@ def plot_full_distribution(result_dir=None, output_dir=None):
         plot_full_distribution_mod = importlib.import_module('plot_full_distribution')
         plot_full_distribution_mod.plot_full_distribution_scatter()
     except Exception as e:
-        print(f"[plot_full_distribution] 오류: {e}")
+        print(f"[plot_full_distribution] Error: {e}")
 
 def plot_ablation(result_dir=None, output_dir=None):
     import sys
@@ -733,7 +733,7 @@ def plot_ablation(result_dir=None, output_dir=None):
         plot_ablation_mod = importlib.import_module('plot_ablation')
         plot_ablation_mod.plot_epoch_performance_trends()
     except Exception as e:
-        print(f"[plot_ablation] 오류: {e}")
+        print(f"[plot_ablation] Error: {e}")
 
 def plot_gradient(result_dir=None, output_dir=None):
     import sys
@@ -743,7 +743,7 @@ def plot_gradient(result_dir=None, output_dir=None):
         plot_gradient_mod = importlib.import_module('plot_gradient')
         plot_gradient_mod.plot_gradient_norms()
     except Exception as e:
-        print(f"[plot_gradient] 오류: {e}")
+        print(f"[plot_gradient] Error: {e}")
 
 def get_latest_policy_log_csv():
     import glob, os
@@ -763,7 +763,7 @@ def plot_policy_log(policy_log_path, output_dir='images/policy_log'):
     os.makedirs(output_dir, exist_ok=True)
     df = pd.read_csv(policy_log_path)
 
-    # 1. label별 예측 클래스 분포
+    # 1. Prediction class distribution by label
     plt.figure(figsize=(7,5))
     sns.countplot(data=df, x='prediction', hue='label')
     plt.title('Prediction distribution by true label')
@@ -774,7 +774,7 @@ def plot_policy_log(policy_log_path, output_dir='images/policy_log'):
     plt.savefig(os.path.join(output_dir, 'prediction_by_label.png'))
     plt.close()
 
-    # 2. label별 confidence 분포
+    # 2. Confidence distribution by label
     plt.figure(figsize=(7,5))
     sns.violinplot(data=df, x='label', y='confidence', inner='quartile')
     plt.title('Confidence distribution by true label')
@@ -784,7 +784,7 @@ def plot_policy_log(policy_log_path, output_dir='images/policy_log'):
     plt.savefig(os.path.join(output_dir, 'confidence_by_label.png'))
     plt.close()
 
-    # 3. 예측/정답별 confusion matrix (heatmap)
+    # 3. Confusion matrix by prediction/ground truth (heatmap)
     cm = pd.crosstab(df['label'], df['prediction'])
     plt.figure(figsize=(5,4))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
@@ -795,7 +795,7 @@ def plot_policy_log(policy_log_path, output_dir='images/policy_log'):
     plt.savefig(os.path.join(output_dir, 'confusion_matrix.png'))
     plt.close()
 
-    # 4. (선택) 환자별 평균 confidence
+    # 4. (Optional) Patient-wise average confidence
     plt.figure(figsize=(10,5))
     mean_conf = df.groupby('patient_id')['confidence'].mean().sort_values()
     mean_conf.plot(kind='bar', color='skyblue')
@@ -817,23 +817,23 @@ def main(result_dir=None, epoch_dir=None, reward_dir=None, ratio_dir=None, full_
     plot_ablation(result_dir=result_dir, output_dir=ablation_dir)
     plot_gradient(result_dir=result_dir, output_dir=grad_dir)
 
-    # === policy_log.csv 자동 시각화 ===
+    # === Automatic visualization of policy_log.csv ===
     policy_log_path = get_latest_policy_log_csv()
     if policy_log_path is not None:
         plot_policy_log(policy_log_path, output_dir='images/policy_log')
     else:
-        print('[policy_log] policy_log.csv 파일을 찾을 수 없습니다.')
+        print('[policy_log] Cannot find policy_log.csv file.')
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--result_dir', type=str, default=None, help='분석할 결과(result) 폴더 경로')
-    parser.add_argument('--epoch_dir', type=str, default=None, help='epoch plot 저장 폴더')
-    parser.add_argument('--reward_dir', type=str, default=None, help='reward plot 저장 폴더')
-    parser.add_argument('--ratio_dir', type=str, default=None, help='ratio plot 저장 폴더')
-    parser.add_argument('--full_dist_dir', type=str, default=None, help='full distribution plot 저장 폴더')
-    parser.add_argument('--ablation_dir', type=str, default=None, help='ablation plot 저장 폴더')
-    parser.add_argument('--grad_dir', type=str, default=None, help='gradient plot 저장 폴더')
+    parser.add_argument('--result_dir', type=str, default=None, help='Result folder path to analyze')
+    parser.add_argument('--epoch_dir', type=str, default=None, help='Epoch plot save folder')
+    parser.add_argument('--reward_dir', type=str, default=None, help='Reward plot save folder')
+    parser.add_argument('--ratio_dir', type=str, default=None, help='Ratio plot save folder')
+    parser.add_argument('--full_dist_dir', type=str, default=None, help='Full distribution plot save folder')
+    parser.add_argument('--ablation_dir', type=str, default=None, help='Ablation plot save folder')
+    parser.add_argument('--grad_dir', type=str, default=None, help='Gradient plot save folder')
     args = parser.parse_args()
 
     main(
