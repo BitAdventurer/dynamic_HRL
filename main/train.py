@@ -97,11 +97,11 @@ MACRO_LR = args.lr
 MICRO_LR = args.lr
 MACRO_WD = args.wd if hasattr(args, 'wd') else 1e-5
 MICRO_WD = args.wd if hasattr(args, 'wd') else 1e-5
-# Paper-aligned: absolute window sizes (10 TRs interval)
-possible_window_sizes = list(range(10, 233, 10))  # [10, 20, 30, ..., 230] TRs
+# Paper-aligned: absolute window sizes (1 TRs interval)
+possible_window_sizes = list(range(10, 233, 1))  #TRs
 possible_shift_ratios = [i / 100 for i in range(1, 101)]  # 0.01~1.00
 ES_PATIENCE = args.patience
-MAX_STEPS_PER_TRIAL = 20
+MAX_STEPS_PER_TRIAL = 50
 DROP_RATE = args.dropout_rate
 
 # Logging system setup
