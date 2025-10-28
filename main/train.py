@@ -280,7 +280,7 @@ def calculate_adaptive_clip_norm(model_type, current_step, total_steps, model):
 
 
 def train_hierarchical_dqn(args, fold_idx, train_loader, val_loader, test_loader, pids_train, pids_val, pids_test):
-    # 결과 저장을 위한 디렉토리 생성
+    # Create directory for saving results
     if getattr(args, 'result_dir', None):
         save_dir = args.result_dir
     else:
@@ -290,12 +290,12 @@ def train_hierarchical_dqn(args, fold_idx, train_loader, val_loader, test_loader
     os.makedirs(save_dir, exist_ok=True)
     logger.info(f"[EXEC_TRACE] Save directory created: {save_dir}")
 
-    # === Epoch별 metric 로그 저장용 CSV 초기화 ===
+    # === Initialize CSV for epoch-wise metric logging ===
     epoch_metrics_log_path = os.path.join(save_dir, 'epoch_metrics_log.csv')
     with open(epoch_metrics_log_path, 'w') as f:
         f.write('Fold,Epoch,Phase,Loss,Acc,Sen,Spec,F1,AUC\n')
 
-    # 전역 변수 접근
+    # Access global variables
     global INFERENCE_ONLY, MODEL_PATH, MODEL_FOLD
     inference_mode = INFERENCE_ONLY
     model_path = MODEL_PATH
@@ -534,7 +534,7 @@ def train_hierarchical_dqn(args, fold_idx, train_loader, val_loader, test_loader
                 avg_loss_mdd = per_class_loss_sum[1] / per_class_count[1] if per_class_count[1] > 0 else 0.0
                 logger.info(f"[EPOCH {epoch}] Fold {fold_idx} | Train Loss NC: {avg_loss_nc:.4f} | Train Loss MDD: {avg_loss_mdd:.4f}")
 
-                # --- Train phase metric 계산 (epoch 끝나고) ---
+                # --- Calculate Train phase metrics (after epoch) ---
                 from sklearn.metrics import accuracy_score, recall_score, f1_score, roc_auc_score, confusion_matrix
                 all_train_preds = []
                 all_train_labels = []
@@ -549,7 +549,7 @@ def train_hierarchical_dqn(args, fold_idx, train_loader, val_loader, test_loader
                         all_train_preds.extend(preds)
                         all_train_labels.extend(batch_labels.numpy())
                         all_train_probs.extend(probs)
-                # metric 계산
+                # Calculate metrics
                 acc_train = accuracy_score(all_train_labels, all_train_preds)
                 sen_train = recall_score(all_train_labels, all_train_preds, pos_label=1)
                 spec_train = recall_score(all_train_labels, all_train_preds, pos_label=0)
@@ -558,7 +558,7 @@ def train_hierarchical_dqn(args, fold_idx, train_loader, val_loader, test_loader
                     auc_train = roc_auc_score(all_train_labels, all_train_probs)
                 except:
                     auc_train = 0.5
-                # Confusion matrix 저장
+                # Save confusion matrix
                 cm = confusion_matrix(all_train_labels, all_train_preds, labels=[0,1])
                 cm_path = os.path.join(save_dir, f'train_confusion_matrix_epoch{epoch+1}_fold{fold_idx}.csv')
                 pd.DataFrame(cm, index=["NC (0)", "MDD (1)"], columns=["Pred NC (0)", "Pred MDD (1)"]).to_csv(cm_path)
@@ -581,7 +581,7 @@ def train_hierarchical_dqn(args, fold_idx, train_loader, val_loader, test_loader
                 with open(gradnorm_csv_path, 'a') as f:
                     f.write(f"{epoch+1},{mean_classifier},{mean_macroQ},{mean_microQ}\n")
 
-                # 평균 loss로 변환 (batch 개수로 나눔)
+                # Convert to average loss (divide by batch count)
                 num_batches = len(train_loader)
                 avg_epoch_loss = epoch_loss / num_batches if num_batches > 0 else 0.0
                 
@@ -678,15 +678,15 @@ def train_hierarchical_dqn(args, fold_idx, train_loader, val_loader, test_loader
                             logger.info("Early stopping triggered.")
                             break
 
-                # === [Epoch별 로그/저장] ===
-                # 평균 loss로 변환 (batch 개수로 나눔)
+                # === [Epoch-wise logging/saving] ===
+                # Convert to average loss (divide by batch count)
                 num_batches = len(train_loader)
                 avg_epoch_loss = epoch_loss / num_batches if num_batches > 0 else 0.0
                 logger.info(f"[EPOCH {epoch}] Fold {fold_idx} | Train Loss: {avg_epoch_loss:.4f} | Val Loss: {val_results['loss']:.4f} | Test Loss: {test_results['loss']:.4f}")
                 logger.info(f"[EPOCH {epoch}] Fold {fold_idx} | Train Acc: {acc_train:.4f} | Val Acc: {val_results['acc']:.4f} | Test Acc: {test_results['acc']:.4f}")
                 logger.info(f"[EPOCH {epoch}] Fold {fold_idx} | Train AUC: {auc_train:.4f} | Val AUC: {val_results['auc']:.4f} | Test AUC: {test_results['auc']:.4f}")
 
-                # === [Epoch별 metric 로그 CSV 저장] ===
+                # === [Save epoch-wise metric log CSV] ===
                 with open(epoch_metrics_log_path, 'a') as f:
                     # Log per-label train loss as extra columns
                     f.write(f'{fold_idx},{epoch},train,{avg_epoch_loss},{acc_train},{sen_train},{spec_train},{f1_train},{auc_train},{avg_loss_nc},{avg_loss_mdd}\n')
@@ -731,10 +731,10 @@ def train_hierarchical_dqn(args, fold_idx, train_loader, val_loader, test_loader
 
 if __name__ == "__main__":
 
-    # 로거 초기화 (이제 ablation_mode가 로그 파일명에 포함됨)
+    # Initialize logger (now ablation_mode is included in log filename)
     logger = setup_logger(args)
     
-    # 시작 로그 출력
+    # Print startup log
     logger.info("Starting Hierarchical RL training script")
     logger.info(f"Ablation Mode: {args.ablation_mode}")
 
