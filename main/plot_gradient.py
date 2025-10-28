@@ -13,7 +13,7 @@ def get_latest_gradient_csv():
 def plot_gradient_norms():
     csv_path = get_latest_gradient_csv()
     if csv_path is None:
-        print("gradient_norms.csv 파일을 찾을 수 없습니다. train.py에서 gradient 기록 기능을 먼저 활성화하세요.")
+        print("Cannot find gradient_norms.csv file. Please enable gradient recording feature in train.py first.")
         return
     df = pd.read_csv(csv_path)
     os.makedirs('images/gradient_plots', exist_ok=True)
