@@ -1,21 +1,21 @@
 """
 EVO.py: Evolutionary Algorithm for Hyperparameter Optimization
 
-이 스크립트는 진화 알고리즘(Evolutionary Algorithm)을 사용하여
-Baseline 분류기 및 HRL 모델의 최적 하이퍼파라미터를 자동으로 탐색합니다.
+This script uses Evolutionary Algorithm to automatically search
+for optimal hyperparameters of Baseline classifiers and HRL models.
 
-주요 기능:
-1. 5-Fold Cross-Validation 기반 적합도(fitness) 평가
-2. 유전 알고리즘 연산: 선택(Selection), 교차(Crossover), 돌연변이(Mutation)
-3. HRL 모드와 Baseline 모드 지원
-4. 다중 분류기 아키텍처 지원 (CRNN, CBGRU, Transformer)
+Key Features:
+1. 5-Fold Cross-Validation based fitness evaluation
+2. Genetic algorithm operations: Selection, Crossover, Mutation
+3. Support for HRL mode and Baseline mode
+4. Multi-classifier architecture support (CRNN, CBGRU, Transformer)
 
-사용법:
-    # HRL 모드
-    USE_HRL = True로 설정 후 실행: python main/EVO.py
+Usage:
+    # HRL mode
+    Set USE_HRL = True and run: python main/EVO.py
     
-    # Baseline 모드
-    USE_HRL = False로 설정 후 실행: python main/EVO.py
+    # Baseline mode
+    Set USE_HRL = False and run: python main/EVO.py
 """
 
 import numpy as np
@@ -49,15 +49,15 @@ from main.HRL import DFCSequenceDataset, ReplayBuffer, evaluate_dataset, compute
 
 class BOLDDataset(Dataset):
     """
-    Baseline 모드용 BOLD 신호 데이터셋
+    Baseline mode BOLD signal dataset
     
-    고정된 윈도우 크기와 스텝 크기를 사용하여 dFC 특징을 추출합니다.
+    Extracts dFC features using fixed window size and step size.
     
     Args:
-        bold_arr (np.ndarray): BOLD 시계열 데이터 (N, T, nROIs)
-        label_arr (np.ndarray): 레이블 (N,) - 0: NC, 1: MDD
-        patient_ids (np.ndarray): 환자 ID (N,)
-        device_if_gpu (torch.device, optional): GPU 사용 시 디바이스
+        bold_arr (np.ndarray): BOLD time series data (N, T, nROIs)
+        label_arr (np.ndarray): Labels (N,) - 0: NC, 1: MDD
+        patient_ids (np.ndarray): Patient IDs (N,)
+        device_if_gpu (torch.device, optional): Device for GPU usage
     """
     def __init__(self, bold_arr, label_arr, patient_ids, device_if_gpu=None):
         super().__init__()
@@ -85,17 +85,17 @@ class BOLDDataset(Dataset):
             lb_i = self.label_arr[idx]
             return bd_i, lb_i, self.patient_ids[idx]
 
-def shift_slice_bold(bold_data, start_idx, w):
+def extract_window(bold_data, start_idx, w):
     """
-    BOLD 신호에서 윈도우 추출 (zero-padding 포함)
+    Extract window from BOLD signal (with zero-padding)
     
     Args:
-        bold_data (torch.Tensor): BOLD 시계열 (T, nROIs)
-        start_idx (int): 시작 인덱스
-        w (int): 윈도우 크기
+        bold_data (torch.Tensor): BOLD time series (T, nROIs)
+        start_idx (int): Starting index
+        w (int): Window size
         
     Returns:
-        torch.Tensor: 추출된 윈도우 (w, nROIs), 필요시 zero-padding
+        torch.Tensor: Extracted window (w, nROIs), zero-padded if necessary
     """
     T, nROIs = bold_data.shape
     end_idx = start_idx + w
@@ -108,17 +108,17 @@ def shift_slice_bold(bold_data, start_idx, w):
         return torch.cat([seg_valid, seg_pad], dim=0)
     return bold_data[start_idx:end_idx, :]
 
-def compute_dFC(bold_segment):
+def compute_dfc(bold_segment):
     """
-    Dynamic Functional Connectivity (dFC) 계산
+    Compute Dynamic Functional Connectivity (dFC)
     
-    Pearson correlation을 사용하여 ROI 간 상관행렬을 계산합니다.
+    Calculates correlation matrix between ROIs using Pearson correlation.
     
     Args:
-        bold_segment (torch.Tensor): BOLD 윈도우 (1, w, nROIs)
+        bold_segment (torch.Tensor): BOLD window (1, w, nROIs)
         
     Returns:
-        torch.Tensor: 평탄화된 상관행렬 (1, nROIs*nROIs)
+        torch.Tensor: Flattened correlation matrix (1, nROIs*nROIs)
     """
     x = bold_segment[0]  # (w, nROIs)
     w_len, nROIs = x.shape
@@ -136,24 +136,24 @@ def compute_dFC(bold_segment):
 
     return corr.reshape(1, -1)  # (1, nROIs*nROIs)
 
-def generate_dFC_features(bold_data, window_size, step_size):
+def create_dfc_sequence(bold_data, window_size, step_size):
     """
-    슬라이딩 윈도우 방식으로 dFC 특징 시퀀스 생성
+    Generate dFC feature sequence using sliding window approach
     
     Args:
-        bold_data (torch.Tensor): BOLD 시계열 (T, nROIs)
-        window_size (int): 윈도우 크기
-        step_size (int): 이동 간격
+        bold_data (torch.Tensor): BOLD time series (T, nROIs)
+        window_size (int): Window size
+        step_size (int): Step interval
         
     Returns:
-        torch.Tensor: dFC 특징 시퀀스 (S, nROIs*nROIs)
-            S = number of windows
+        torch.Tensor: dFC feature sequence (S, nROIs*nROIs)
+        where S = number of windows
     """
     segments = []
     current_idx = 0
     while current_idx < bold_data.shape[0]:
-        seg = shift_slice_bold(bold_data, current_idx, window_size).unsqueeze(0)  # (1, w, nROIs)
-        dfc_feat = compute_dFC(seg)  # (1, nROIs*nROIs)
+        seg = extract_window(bold_data, current_idx, window_size).unsqueeze(0)  # (1, w, nROIs)
+        dfc_feat = compute_dfc(seg)  # (1, nROIs*nROIs)
         segments.append(dfc_feat)
         current_idx += step_size
     return torch.cat(segments, dim=0)  # (S, nROIs*nROIs)
@@ -167,24 +167,24 @@ def create_classifier(classifier_type, input_dim, hidden_dim, num_layers, dropou
                       num_classes=2, out_channels=32, kernel_size=3, pool_size=2,
                       num_heads=8, dim_feedforward=512, transformer_dropout=0.1):
     """
-    분류기 모델 생성 팩토리 함수
+    Factory function for creating classifier models
     
     Args:
-        classifier_type (str): 'crnn', 'cbgru', 또는 'transformer'
-        input_dim (int): 입력 차원 (nROIs * nROIs)
-        hidden_dim (int): Hidden layer 차원
-        num_layers (int): 레이어 수
-        dropout (float): Dropout 비율
-        num_classes (int): 분류 클래스 수 (기본: 2)
-        out_channels (int): CNN 출력 채널 (CRNN/CBGRU용)
-        kernel_size (int): CNN 커널 크기
-        pool_size (int): Pooling 크기
-        num_heads (int): Attention head 수 (Transformer용)
-        dim_feedforward (int): FFN 차원 (Transformer용)
+        classifier_type (str): 'crnn', 'cbgru', or 'transformer'
+        input_dim (int): Input dimension (nROIs * nROIs)
+        hidden_dim (int): Hidden layer dimension
+        num_layers (int): Number of layers
+        dropout (float): Dropout rate
+        num_classes (int): Number of classification classes (default: 2)
+        out_channels (int): CNN output channels (for CRNN/CBGRU)
+        kernel_size (int): CNN kernel size
+        pool_size (int): Pooling size
+        num_heads (int): Number of attention heads (for Transformer)
+        dim_feedforward (int): FFN dimension (for Transformer)
         transformer_dropout (float): Transformer dropout
         
     Returns:
-        nn.Module: 생성된 분류기 모델
+        nn.Module: Created classifier model
     """
     if classifier_type == 'transformer':
         model = SpatioTemporalTransformer(
@@ -227,16 +227,16 @@ def create_classifier(classifier_type, input_dim, hidden_dim, num_layers, dropou
 # 3. Training / Evaluation Helpers
 ###################################
 
-def compute_classification_metrics(logits, labels):
+def calculate_classification_metrics(logits, labels):
     """
-    분류 성능 메트릭 계산
+    Calculate classification performance metrics
     
     Args:
-        logits (torch.Tensor): 모델 출력 logits (N, 2)
-        labels (torch.Tensor): 정답 레이블 (N,)
+        logits (torch.Tensor): Model output logits (N, 2)
+        labels (torch.Tensor): Ground truth labels (N,)
         
     Returns:
-        dict: 성능 메트릭
+        dict: Performance metrics
             - acc: Accuracy
             - sen: Sensitivity (Recall)
             - spec: Specificity
@@ -282,7 +282,7 @@ def evaluate_dataset_with_minibatch(model, data_loader, device, window_size, ste
             # Convert each sample in the batch to a sequence of dFC features
             batch_features_list = []
             for i in range(bold_ts_batch.size(0)):
-                seq_features = generate_dFC_features(
+                seq_features = create_dfc_sequence(
                     bold_ts_batch[i], window_size, step_size
                 )
                 batch_features_list.append(seq_features.unsqueeze(0))
@@ -294,17 +294,17 @@ def evaluate_dataset_with_minibatch(model, data_loader, device, window_size, ste
 
     all_logits = torch.cat(all_logits, dim=0)
     all_labels = torch.cat(all_labels, dim=0)
-    return compute_classification_metrics(all_logits, all_labels)
+    return calculate_classification_metrics(all_logits, all_labels)
 
 def train_evaluate_hrl_with_minibatch(hparams, train_loader, val_loader, device, epochs=5):
     """
-    HRL 모델 학습 및 평가
+    HRL model training and evaluation
     
-    주어진 하이퍼파라미터로 HRL 모델을 학습하고 validation 성능을 평가합니다.
-    Macro Q-Network (DQN)와 Micro Q-Network (Contextual Bandit)를 함께 학습합니다.
+    Trains HRL model with given hyperparameters and evaluates validation performance.
+    Trains Macro Q-Network (DQN) and Micro Q-Network (Contextual Bandit) together.
     
     Args:
-        hparams (dict): 하이퍼파라미터 딕셔너리
+        hparams (dict): Hyperparameter dictionary
             - crnn_hidden_dim, crnn_num_layers, crnn_dropout
             - crnn_lr, crnn_wd
             - macro_lr, macro_wd
@@ -312,15 +312,15 @@ def train_evaluate_hrl_with_minibatch(hparams, train_loader, val_loader, device,
             - rl_hidden_dim, rl_embed_dim, rl_gamma
             - rl_batch_size, rl_buffer_capacity, rl_target_update_freq
             - focal_alpha, focal_gamma
-        train_loader (DataLoader): 학습 데이터 로더
-        val_loader (DataLoader): 검증 데이터 로더
-        device (torch.device): 학습 디바이스
-        epochs (int): 학습 에폭 수
+        train_loader (DataLoader): Training data loader
+        val_loader (DataLoader): Validation data loader
+        device (torch.device): Training device
+        epochs (int): Number of training epochs
         
     Returns:
         tuple: (val_metrics, hrl_model)
-            - val_metrics (dict): 검증 성능 메트릭
-            - hrl_model (nn.Module): 학습된 HRL 모델
+            - val_metrics (dict): Validation performance metrics
+            - hrl_model (nn.Module): Trained HRL model
     """
     # Extract hyperparameters
     crnn_hidden_dim = hparams['crnn_hidden_dim']
@@ -483,26 +483,26 @@ def train_evaluate_hrl_with_minibatch(hparams, train_loader, val_loader, device,
 
 def train_evaluate_classifier_with_minibatch(hparams, train_loader, val_loader, device, epochs=5):
     """
-    Baseline 분류기 학습 및 평가 (고정 윈도우/스텝)
+    Baseline classifier training and evaluation (fixed window/step)
     
-    CRNN, CBGRU, 또는 Transformer 분류기를 학습하고 검증 성능을 평가합니다.
+    Trains and evaluates CRNN, CBGRU, or Transformer classifier.
     
     Args:
-        hparams (dict): 하이퍼파라미터 딕셔너리
-            - classifier_type: 'crnn', 'cbgru', 또는 'transformer'
+        hparams (dict): Hyperparameter dictionary
+            - classifier_type: 'crnn', 'cbgru', or 'transformer'
             - hidden_dim, num_layers, dropout
             - lr, wd
-            - window_size, step_size (고정값)
-            - num_heads, dim_feedforward (Transformer용)
-        train_loader (DataLoader): 학습 데이터 로더
-        val_loader (DataLoader): 검증 데이터 로더
-        device (torch.device): 학습 디바이스
-        epochs (int): 학습 에폭 수
+            - window_size, step_size (fixed values)
+            - num_heads, dim_feedforward (for Transformer)
+        train_loader (DataLoader): Training data loader
+        val_loader (DataLoader): Validation data loader
+        device (torch.device): Training device
+        epochs (int): Number of training epochs
         
     Returns:
         tuple: (val_metrics, model)
-            - val_metrics (dict): 검증 성능 메트릭
-            - model (nn.Module): 학습된 분류기 모델
+            - val_metrics (dict): Validation performance metrics
+            - model (nn.Module): Trained classifier model
     """
     classifier_type = hparams.get('classifier_type', 'crnn')
     hidden_dim  = hparams['hidden_dim']
@@ -573,16 +573,16 @@ def train_evaluate_classifier_with_minibatch(hparams, train_loader, val_loader, 
 
 def create_random_hparams(param_ranges, use_hrl=False):
     """
-    랜덤 하이퍼파라미터 생성
+    Generate random hyperparameters
     
-    주어진 범위에서 랜덤하게 하이퍼파라미터 조합을 생성합니다.
+    Creates random hyperparameter combinations from given ranges.
     
     Args:
-        param_ranges (dict): 각 하이퍼파라미터의 가능한 값 리스트
-        use_hrl (bool): True면 HRL 파라미터, False면 Baseline 파라미터
+        param_ranges (dict): List of possible values for each hyperparameter
+        use_hrl (bool): True for HRL parameters, False for Baseline parameters
         
     Returns:
-        dict: 랜덤 하이퍼파라미터 조합
+        dict: Random hyperparameter combination
     """
     if use_hrl:
         # HRL mode: different parameter set
@@ -677,18 +677,18 @@ def create_random_hparams(param_ranges, use_hrl=False):
 
 def mutate_hparams(hparams, param_ranges, mutation_prob=0.2, use_hrl=False):
     """
-    하이퍼파라미터 돌연변이 연산
+    Hyperparameter mutation operation
     
-    각 하이퍼파라미터를 일정 확률로 변이시킵니다.
+    Mutates each hyperparameter with certain probability.
     
     Args:
-        hparams (dict): 원본 하이퍼파라미터
-        param_ranges (dict): 가능한 값 범위
-        mutation_prob (float): 돌연변이 확률 (기본: 0.2)
-        use_hrl (bool): HRL 모드 여부
+        hparams (dict): Original hyperparameters
+        param_ranges (dict): Possible value ranges
+        mutation_prob (float): Mutation probability (default: 0.2)
+        use_hrl (bool): Whether HRL mode
         
     Returns:
-        dict: 변이된 하이퍼파라미터
+        dict: Mutated hyperparameters
     """
     keys = list(hparams.keys())
     
@@ -717,17 +717,17 @@ def mutate_hparams(hparams, param_ranges, mutation_prob=0.2, use_hrl=False):
 
 def crossover_hparams(parent1, parent2, use_hrl=False):
     """
-    하이퍼파라미터 교차 연산
+    Hyperparameter crossover operation
     
-    두 부모 하이퍼파라미터를 교차하여 자식을 생성합니다.
+    Creates child by crossing two parent hyperparameters.
     
     Args:
-        parent1 (dict): 첫 번째 부모 하이퍼파라미터
-        parent2 (dict): 두 번째 부모 하이퍼파라미터
-        use_hrl (bool): HRL 모드 여부
+        parent1 (dict): First parent hyperparameters
+        parent2 (dict): Second parent hyperparameters
+        use_hrl (bool): Whether HRL mode
         
     Returns:
-        dict: 교차된 자식 하이퍼파라미터
+        dict: Crossed child hyperparameters
     """
     # Get common keys
     common_keys = set(parent1.keys()) & set(parent2.keys())
@@ -765,20 +765,20 @@ def crossover_hparams(parent1, parent2, use_hrl=False):
 
 def crossval_fitness(hparams, fold_loaders, device, epochs=5, use_hrl=False):
     """
-    5-Fold Cross-Validation 기반 적합도(fitness) 평가
+    5-Fold Cross-Validation based fitness evaluation
     
-    주어진 하이퍼파라미터로 5개 fold에서 학습 및 검증을 수행하고
-    평균 성능을 반환합니다.
+    Trains and validates on 5 folds with given hyperparameters
+    and returns average performance.
     
     Args:
-        hparams (dict): 평가할 하이퍼파라미터
-        fold_loaders (list): [(train_loader, val_loader), ...] 5개 fold
-        device (torch.device): 학습 디바이스
-        epochs (int): 각 fold 학습 에폭 수
-        use_hrl (bool): HRL 모드 여부
+        hparams (dict): Hyperparameters to evaluate
+        fold_loaders (list): [(train_loader, val_loader), ...] 5 folds
+        device (torch.device): Training device
+        epochs (int): Training epochs per fold
+        use_hrl (bool): Whether HRL mode
         
     Returns:
-        dict: 5-fold 평균 성능 메트릭
+        dict: 5-fold average performance metrics
             - acc, sen, spec, f1, auc
     """
     metrics_sum = {'acc':0.0, 'sen':0.0, 'spec':0.0, 'f1':0.0, 'auc':0.0}
@@ -799,33 +799,33 @@ def crossval_fitness(hparams, fold_loaders, device, epochs=5, use_hrl=False):
     return metrics_sum
 
 def evolutionary_search_with_cv(fold_loaders, device, param_ranges,
-                                pop_size=8, generations=5, epochs=5, use_hrl=False):
+                               pop_size=8, generations=5, epochs=5, use_hrl=False):
     """
-    진화 알고리즘 기반 하이퍼파라미터 최적화
+    Evolutionary algorithm based hyperparameter optimization
     
-    유전 알고리즘을 사용하여 최적의 하이퍼파라미터를 탐색합니다.
-    5-fold cross-validation으로 각 개체(하이퍼파라미터 조합)의 적합도를 평가합니다.
+    Searches for optimal hyperparameters using genetic algorithm.
+    Evaluates fitness of each individual (hyperparameter combination) with 5-fold cross-validation.
     
-    알고리즘:
-        1. 초기 인구 생성 (랜덤)
-        2. 적합도 평가 (5-fold CV)
-        3. 선택: 상위 50% 생존
-        4. 교차 및 돌연변이로 자식 생성
-        5. 반복
+    Algorithm:
+        1. Generate initial population (random)
+        2. Evaluate fitness (5-fold CV)
+        3. Selection: top 50% survive
+        4. Generate children with crossover and mutation
+        5. Repeat
     
     Args:
-        fold_loaders (list): 5-fold 데이터 로더
-        device (torch.device): 학습 디바이스
-        param_ranges (dict): 하이퍼파라미터 탐색 공간
-        pop_size (int): 인구 크기 (기본: 8)
-        generations (int): 세대 수 (기본: 5)
-        epochs (int): 각 개체의 학습 에폭
-        use_hrl (bool): HRL 모드 여부
+        fold_loaders (list): 5-fold data loaders
+        device (torch.device): Training device
+        param_ranges (dict): Hyperparameter search space
+        pop_size (int): Population size (default: 8)
+        generations (int): Number of generations (default: 5)
+        epochs (int): Training epochs per individual
+        use_hrl (bool): Whether HRL mode
         
     Returns:
         tuple: (best_hparams, best_val_metrics)
-            - best_hparams: 최적 하이퍼파라미터
-            - best_val_metrics: 최적 하이퍼파라미터의 검증 성능
+            - best_hparams: optimal hyperparameters
+            - best_val_metrics: validation performance of optimal hyperparameters
     """
     population = [create_random_hparams(param_ranges, use_hrl=use_hrl) for _ in range(pop_size)]
 
@@ -879,22 +879,22 @@ def evolutionary_search_with_cv(fold_loaders, device, param_ranges,
 
 def build_folds(all_data, fold_indices, batch_size, device_if_gpu=None, use_hrl=False, possible_window_sizes=None, possible_shift_ratios=None):
     """
-    5-Fold 데이터 로더 생성
+    Create 5-Fold data loaders
     
-    각 fold에 대해 (train_loader, val_loader) 쌍을 생성합니다.
-    HRL 모드와 Baseline 모드를 모두 지원합니다.
+    Creates (train_loader, val_loader) pair for each fold.
+    Supports both HRL mode and Baseline mode.
     
     Args:
-        all_data (dict): 전체 데이터 (util.load_signal_data() 결과)
-        fold_indices (list): Fold 인덱스 리스트 [1, 2, 3, 4, 5]
-        batch_size (int): 배치 크기
-        device_if_gpu (torch.device): GPU 디바이스 (Baseline용)
-        use_hrl (bool): True면 DFCSequenceDataset, False면 BOLDDataset
-        possible_window_sizes (list): HRL용 윈도우 크기 옵션
-        possible_shift_ratios (list): HRL용 shift ratio 옵션
+        all_data (dict): All data (result from util.load_signal_data())
+        fold_indices (list): Fold index list [1, 2, 3, 4, 5]
+        batch_size (int): Batch size
+        device_if_gpu (torch.device): GPU device (for Baseline)
+        use_hrl (bool): True for DFCSequenceDataset, False for BOLDDataset
+        possible_window_sizes (list): Window size options for HRL
+        possible_shift_ratios (list): Shift ratio options for HRL
         
     Returns:
-        list: [(train_loader, val_loader), ...] 5개 fold
+        list: [(train_loader, val_loader), ...] 5 folds
     """
     folds = []
     for fold_idx in fold_indices:
@@ -939,15 +939,15 @@ def build_folds(all_data, fold_indices, batch_size, device_if_gpu=None, use_hrl=
 
 if __name__ == "__main__":
     """
-    메인 실행 블록
+    Main execution block
     
-    진화 알고리즘을 사용하여 최적의 하이퍼파라미터를 탐색하고
-    최종 테스트 세트에서 성능을 평가합니다.
+    Uses evolutionary algorithm to search for optimal hyperparameters
+    and evaluates performance on final test set.
     
-    사용법:
-        1. USE_HRL 변수를 True/False로 설정
-        2. python main/EVO.py 실행
-        3. 결과 확인
+    Usage:
+        1. Set USE_HRL variable to True/False
+        2. Run python main/EVO.py
+        3. Check results
     """
     
     # ====================================
@@ -1151,9 +1151,9 @@ if __name__ == "__main__":
             final_metrics, final_model = train_evaluate_hrl_with_minibatch(
                 best_hparams,
                 combined_loader,
-                combined_loader,  # 여기서는 val_loader 없이 train+val 병합 데이터만 사용
+                combined_loader,  # Here we use train+val merged data only without val_loader
                 DEVICE,
-                epochs=10  # 예: 마지막 모델 학습 epoch
+                epochs=10  # Example: final model training epoch
             )
             # Evaluate on test
             criterion = nn.CrossEntropyLoss()
@@ -1183,9 +1183,9 @@ if __name__ == "__main__":
             final_metrics, final_model = train_evaluate_classifier_with_minibatch(
                 best_hparams,
                 combined_loader,
-                combined_loader,  # 여기서는 val_loader 없이 train+val 병합 데이터만 사용
+                combined_loader,  # Here we use train+val merged data only without val_loader
                 DEVICE,
-                epochs=10  # 예: 마지막 모델 학습 epoch
+                epochs=10  # Example: final model training epoch
             )
             # Evaluate on test
             fold_test_metrics = evaluate_dataset_with_minibatch(
