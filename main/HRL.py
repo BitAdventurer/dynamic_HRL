@@ -315,10 +315,10 @@ def evaluate_dataset(model_tuple, loader, criterion, device, ablation_mode, fixe
 
                     elif ablation_mode == 'no_macro':
                         w = min(fixed_window_size, remain_len)
-                        w = max(w, 1)  # 최소 1 보장
-                        macro_a_test = 0  # 로깅용 값 (의미 없음)
+                        w = max(w, 1)  # Ensure minimum of 1
+                        macro_a_test = 0  # Logging value (meaningless)
                         
-                        # Micro 에이전트는 정상 작동
+                        # Micro agent operates normally
                         micro_qvals = microQ(micro_s_test)
                         micro_a_test= micro_qvals.argmax(dim=1).item()
                         shift_ratio = possible_shift_ratios[micro_a_test]
@@ -329,21 +329,21 @@ def evaluate_dataset(model_tuple, loader, criterion, device, ablation_mode, fixe
                         macro_a_test = macro_qvals.argmax(dim=1).item()
                         w = possible_window_sizes[macro_a_test]  # Paper: absolute size
                         w = min(w, remain_len)
-                        w = max(w, 1)  # 최소 1
+                        w = max(w, 1)  # Ensure minimum of 1
                         
-                        # Micro 에이전트 비활성화: 고정된 이동 간격 사용
+                        # Micro agent disabled: use fixed shift interval
                         shift_ratio = fixed_shift_ratio
                         delta_t = max(1, round(shift_ratio * w))
-                        micro_a_test = 0  # 로깅용 값 (의미 없음)
+                        micro_a_test = 0  # Logging value (meaningless)
                     
                     else:  # 'fixed'
-                        # 두 에이전트 모두 비활성화: 고정 값 사용
+                        # Both agents disabled: use fixed values
                         w = min(fixed_window_size, remain_len)
-                        w = max(w, 1)  # 최소 1
+                        w = max(w, 1)  # Ensure minimum of 1
                         shift_ratio = fixed_shift_ratio
                         delta_t = max(1, round(shift_ratio * w))
-                        macro_a_test = 0  # 로깅용 값 (의미 없음)
-                        micro_a_test= 0  # 로깅용 값 (의미 없음)
+                        macro_a_test = 0  # Logging value (meaningless)
+                        micro_a_test = 0  # Logging value (meaningless)
 
                     seq_segment_test = dfc_seq_i[current_idx:current_idx + w].unsqueeze(0)  # (1, w, feat_dim)
                     out_test = classifier(seq_segment_test)
@@ -352,7 +352,7 @@ def evaluate_dataset(model_tuple, loader, criterion, device, ablation_mode, fixe
                     # Calculate reward for RL (always calculate, regardless of track_usage)
                     reward = 0.0  # Default
                     if ablation_mode == 'full':
-                        # reward 계산 (정확한 예측은 양수 reward, 잘못된 예측은 음수 reward)
+                        # Reward calculation (correct prediction = positive reward, wrong prediction = negative reward)
                         prob = F.softmax(out_test, dim=1)
                         confidence = prob[0, pred].item()  # Probability of the predicted class
 
@@ -452,21 +452,21 @@ def evaluate_dataset(model_tuple, loader, criterion, device, ablation_mode, fixe
     for pid, label in patient_labels.items():
         if pid in patient_probs:
             y_true_list.append(label)
-            # 예측값은 patient_predictions의 다수결로 계산
+            # Prediction calculated by majority vote from patient_predictions
             preds = patient_predictions[pid]
             maj_vote = 1 if sum(preds) >= (len(preds) / 2) else 0
             y_pred_list.append(maj_vote)
             y_score_list.append(np.mean(patient_probs[pid]))
 
-    # 진단용: 예측/라벨 분포, confusion matrix 출력
+    # Diagnostic: print prediction/label distribution, confusion matrix
     from collections import Counter
     try:
         import sklearn.metrics
-        print("[EVAL_DIAG] y_true 분포:", Counter(y_true_list))
-        print("[EVAL_DIAG] y_pred 분포:", Counter(y_pred_list))
+        print("[EVAL_DIAG] y_true distribution:", Counter(y_true_list))
+        print("[EVAL_DIAG] y_pred distribution:", Counter(y_pred_list))
         print("[EVAL_DIAG] Confusion Matrix:\n", sklearn.metrics.confusion_matrix(y_true_list, y_pred_list))
     except Exception as e:
-        print("[EVAL_DIAG] Confusion matrix 계산 오류:", e)
+        print("[EVAL_DIAG] Confusion matrix calculation error:", e)
 
     if len(np.unique(y_true_list)) > 1:
         fpr, tpr, _ = roc_curve(y_true_list, y_score_list, pos_label=1)
@@ -479,8 +479,8 @@ def evaluate_dataset(model_tuple, loader, criterion, device, ablation_mode, fixe
     logger.info(f"[EVAL_METRIC_LOG] acc={acc_val:.4f}, sen={sen_val:.4f}, spec={spec_val:.4f}, f1={f1_val:.4f}, auc={roc_auc_val:.4f}")
     logger.info(f"[EVAL_METRIC_LOG] y_true_list={y_true_list}")
     logger.info(f"[EVAL_METRIC_LOG] y_score_list={y_score_list}")
-    # --- 평균 loss 계산 및 결과에 추가 ---
-    # 모든 예측에 대해 loss 누적
+    # --- Calculate average loss and add to results ---
+    # Accumulate loss for all predictions
     total_loss = 0.0
     total_count = 0
     classifier.eval()
@@ -490,7 +490,7 @@ def evaluate_dataset(model_tuple, loader, criterion, device, ablation_mode, fixe
             lb_batch = lb_batch.to(device)
             out = classifier(dfc_batch)
             loss = criterion(out, lb_batch)
-            loss_scalar = loss.mean()  # 또는 loss.sum() / batch_size
+            loss_scalar = loss.mean()  # or loss.sum() / batch_size
             total_loss += loss_scalar.item() * dfc_batch.size(0)
             total_count += dfc_batch.size(0)
     avg_loss = total_loss / max(total_count, 1)
