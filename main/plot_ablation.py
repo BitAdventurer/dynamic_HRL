@@ -31,7 +31,7 @@ def plot_ablation_performance():
     Plot the performance metrics for different ablation modes.
     This includes accuracy, sensitivity, specificity, F1 score, AUC, and reward.
     """
-    print("시각화 이미지가 'images/ablation' 폴더에 저장되었습니다.")
+    print("Visualization images saved to 'images/ablation' folder.")
     
     # Read ablation stats data
     stats_path = 'ablation_results/ablation_stats.csv'
@@ -182,7 +182,7 @@ def plot_epoch_performance_trends():
     Plot performance metrics per epoch for different ablation modes.
     This creates line graphs showing how metrics change over epochs.
     """
-    print("시각화 이미지가 'images/ablation' 폴더에 저장되었습니다.")
+    print("Visualization images saved to 'images/ablation' folder.")
     
     # Define mode directories and their display names
     mode_dirs = {
@@ -344,8 +344,8 @@ def plot_epoch_performance_trends():
     print("Epoch-by-epoch performance plots saved to 'images/ablation' directory!")
 
 def main():
-    # 에폭 관련 그래프만 생성 (막대 그래프는 생성하지 않음)
-    # plot_ablation_performance()  # 주석 처리하여 막대 그래프는 생성하지 않음
+    # Generate only epoch-related graphs (do not generate bar graphs)
+    # plot_ablation_performance()  # Commented out to avoid generating bar graphs
     plot_epoch_performance_trends()
 
 if __name__ == '__main__':
