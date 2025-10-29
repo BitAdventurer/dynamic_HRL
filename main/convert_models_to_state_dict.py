@@ -96,13 +96,13 @@ for fname, cls, ctor_args in file_map:
         continue
     print(f"[CONVERT] {fpath}")
     model = torch.load(fpath, map_location=DEVICE)
-    # 새 state_dict 파일명
+    # New state_dict filename
     state_dict_path = fpath.replace('.pt', '_state.pt')
-    # 만약 이미 state_dict 파일이면 skip
+    # Skip if state_dict file already exists
     if os.path.exists(state_dict_path):
         print(f"[SKIP] {state_dict_path} (already exists)")
         continue
-    # state_dict 저장
+    # Save state_dict
     torch.save(model.state_dict(), state_dict_path)
     print(f"[SAVED] {state_dict_path}")
 
